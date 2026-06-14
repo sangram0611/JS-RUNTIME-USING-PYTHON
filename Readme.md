@@ -32,4 +32,4 @@ JavaScript Code
 ### Run JS file:
 
 ```bash
-python -m thunder.main run examples/demo.js
+python -m thunder.main run examples/demo.js   <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/db55bd8a-ea91-4db4-9c62-c6bb2bc93265" />
