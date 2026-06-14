@@ -121,11 +121,6 @@ pip install quickjs
 python -m thunder.main run examples/script.js
 ```
 
-**Run test suite:**
-```bash
-python test_runner.py
-```
-
 **Example input** (`script.js`):
 ```javascript
 let arr = [1, 2, 3];
@@ -149,19 +144,7 @@ ThunderJS
 ──────────────────────────
 ```
 
-**Test runner output:**
-```
-File: tc1_types.js       → PASS
-File: tc2_loops.js       → PASS
-File: tc3_arrays.js      → PASS
-File: tc4_strings.js     → PASS
-File: tc5_objects.js     → PASS
-File: tc6_functions.js   → PASS
 
-═══════════════════════
- Score: 6 / 6   100%
-═══════════════════════
-```
 
 ---
 
