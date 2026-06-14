@@ -168,3 +168,7 @@ ThunderJS mirrors the internal architecture of production runtimes:
 - **ThunderJS** — embeds QuickJS inside Python with sandboxed process execution
 
 The core idea is identical: a host language wraps a JS engine, intercepts I/O at the boundary, and exposes controlled APIs. ThunderJS is that architecture in its simplest, most readable form.
+
+
+<img width="2720" height="1360" alt="thunderjs_banner" src="https://github.com/user-attachments/assets/416bf9dd-dd32-496a-a113-98a534755e14" />
+
