@@ -1,125 +1,187 @@
-⚡ ThunderJS Runtime
+# ⚡ ThunderJS Runtime
 
-A JavaScript Runtime Engine built in Python using QuickJS that executes JavaScript code, simulates console output, and demonstrates real-world interpreter + sandbox architecture design.
+A sandboxed JavaScript execution engine built in Python — runs JS code through QuickJS, intercepts output at the interpreter level, and reports execution results with full type normalization.
 
-🚀 Overview
+---
 
-ThunderJS Runtime is a lightweight JavaScript execution engine written in Python.
-It executes JavaScript code inside a controlled environment using the QuickJS engine and simulates how real-world runtimes like Node.js work internally.
+## What It Actually Does
 
-This project focuses on:
+Most people think "running JavaScript" means a browser or Node.js. ThunderJS proves otherwise.
 
-JavaScript execution model
-Runtime architecture design
-Sandbox execution system
-Output interception and formatting
-Interpreter-level thinking
-Hackathon Objective
+It embeds a full JavaScript engine (QuickJS) inside Python, intercepts `console.log` at the C-binding layer, normalizes every JS type into human-readable output, and wraps the entire execution in an OS-level process sandbox with timeout enforcement.
 
-Build a system that:
+No browser. No Node. Pure Python → JS execution pipeline.
 
-Accepts JavaScript code as input
-Executes it using a non-JavaScript language (Python)
-Produces correct output
-Supports core JavaScript concepts
-Handles execution safely using sandboxing
-⚙️ Tech Stack
-Python 3
-QuickJS (JavaScript Engine)
-multiprocessing (Sandbox system)
-Custom runtime layer
-🧠 System Architecture
-JavaScript Code Input
-        ↓
-Python Runtime (ThunderJS Engine)
-        ↓
-QuickJS Execution Engine
-        ↓
-console.log Override (JS Layer)
-        ↓
-Python Callback (_print function)
-        ↓
-Output Buffer (Python List)
-        ↓
-Formatted Output + Execution Report
-🔥 Core Features
+---
 
-✔ JavaScript execution in Python
-✔ console.log simulation
-✔ Variables (let/const) support
-✔ Functions & arrow functions
-✔ Loops (for/while)
-✔ Arrays & objects handling
-✔ String & number operations
-✔ Boolean & undefined handling
-✔ Type coercion support
-✔ Sandbox execution using multiprocessing
-✔ Timeout protection
-✔ Execution reporting system
-✔ Multi-test runner support
+## Architecture
 
-🧪 Supported JavaScript Concepts
-Variables (let, const)
-Functions & arrow functions
-Loops (for, while)
-Arrays & array methods
-Objects
-Strings methods
-Math operations
-Boolean logic
-Undefined / null handling
-console.log simulation
-Type coercion
-⚙️ How It Works (Internal Flow)
-JavaScript code is passed to QuickJS engine
-console.log is overridden with Python callback
-Output is captured in Python memory
-Data types are normalized:
-arrays → JSON.stringify
-objects → safe string conversion
-undefined → "undefined"
-boolean → true/false strings
-Final output is collected
-Execution report is generated
-🧪 Example Execution
-Input JavaScript
-let arr = [1,2,3];
-console.log(arr);
-console.log("ThunderJS");
-Output
-[1,2,3]
-ThunderJS
-📊 Execution Report
-------------------------
-ThunderJS Runtime Report
-------------------------
-Status: SUCCESS
-Time: 10.25 ms
-File: example.js
-------------------------
-🛡 Sandbox System
+```
+JavaScript Source Code
+        │
+        ▼
+┌─────────────────────────┐
+│   Sandbox Layer         │  ← multiprocessing isolates execution
+│   (Process Boundary)    │    enforces timeout, prevents crashes
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│   ThunderJS Engine      │  ← Python runtime orchestrator
+│   (JSEngine class)      │    owns QuickJS context lifecycle
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│   QuickJS Context       │  ← embedded C-level JS engine
+│   ctx.eval(code)        │    executes actual JavaScript
+└────────────┬────────────┘
+             │
+        console.log called
+             │
+             ▼
+┌─────────────────────────┐
+│   JS-layer Override     │  ← console.log replaced at JS boot
+│   arguments → string    │    handles variadic args, all types
+└────────────┬────────────┘
+             │
+        _print() callback
+             │
+             ▼
+┌─────────────────────────┐
+│   Python Output Buffer  │  ← list collects each line
+│   Type Normalization    │    array→JSON, bool→lowercase, etc.
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│   Execution Report      │  ← status, time_ms, output, errors
+└─────────────────────────┘
+```
 
-ThunderJS uses Python multiprocessing to:
+---
 
-Isolate execution
-Prevent infinite loops
-Enforce timeout limits
-Avoid system crash from unsafe JS
+## Why Each Layer Exists
 
-🚀 How to Run
-Install dependencies
+**QuickJS over a Python JS parser** — QuickJS is a complete, spec-compliant JS engine in C. It handles closures, prototypes, coercion, and the full ES2020 spec correctly. Writing that from scratch would be months of work.
+
+**console.log override in JS, not Python** — JS arrays and objects cross the Python boundary as opaque C pointers. Trying to serialize them in Python produces garbage (`<_quickjs.Object at 0x...>`). By running `JSON.stringify` inside JS before handing the string to Python, the boundary is clean.
+
+**multiprocessing sandbox over threading** — `threading` shares memory; a runaway JS loop starves the whole process. `multiprocessing` gives a true OS process boundary — the sandbox dies, the host lives.
+
+**Output buffer over stdout capture** — redirecting stdout is fragile and can break logging, error reporting, and test frameworks. A Python list as the buffer gives fine-grained control per execution.
+
+---
+
+## Type Normalization Table
+
+| JS Value | Raw Python Receives | ThunderJS Outputs |
+|---|---|---|
+| `[1,2,3]` | opaque object | `[1,2,3]` |
+| `{a:1}` | opaque object | `{"a":1}` |
+| `true` / `false` | `True` / `False` | `true` / `false` |
+| `undefined` | `None` | `undefined` |
+| `null` | `None` | `null` |
+| `NaN` | `nan` | `NaN` |
+| `"hello"` | `"hello"` | `hello` |
+| `42` | `42` | `42` |
+
+---
+
+## Supported JavaScript
+
+| Category | Features |
+|---|---|
+| Declarations | `let`, `const`, `var` |
+| Types | `number`, `string`, `boolean`, `null`, `undefined`, `object`, `array` |
+| Operators | arithmetic, comparison, logical, assignment, ternary, spread `...` |
+| Control flow | `if/else if/else`, `switch`, ternary |
+| Loops | `for`, `while`, `do...while` |
+| Functions | declarations, expressions, arrow functions, callbacks, rest params |
+| Arrays | `push`, `pop`, `shift`, `unshift`, `slice`, `splice`, `concat`, `includes`, `indexOf`, `sort`, `reverse`, `map`, `filter`, `reduce`, `find`, `some`, `every` |
+| Strings | `trim`, `toUpperCase`, `toLowerCase`, `replace`, `replaceAll`, `substring`, `slice`, `split`, `includes`, `startsWith`, `endsWith`, `indexOf` |
+| Objects | literals, dot/bracket notation, `Object.keys`, spread, destructuring |
+| Built-ins | `Math`, `Date`, `JSON`, `Array.isArray`, `Number.isNaN`, `parseInt`, `parseFloat` |
+| Coercion | type casting, `==` vs `===`, implicit conversions |
+
+---
+
+## Installation
+
+```bash
 pip install quickjs
-Run JavaScript file
-python -m thunder.main run examples/master_test.js
-Run tests (if available)
+```
+
+---
+
+## Usage
+
+**Run a JS file:**
+```bash
+python -m thunder.main run examples/script.js
+```
+
+**Run test suite:**
+```bash
 python test_runner.py
-🧠 Design Inspiration
+```
 
-This project is inspired by:
+**Example input** (`script.js`):
+```javascript
+let arr = [1, 2, 3];
+console.log(arr);
+console.log(arr.map(x => x * 2));
+console.log("ThunderJS");
+```
 
-Node.js runtime architecture
-V8 JavaScript engine concepts
-Python interpreter design
-Real-world sandbox execution systems
+**Output:**
+```
+[1,2,3]
+[2,4,6]
+ThunderJS
 
-It demonstrates how programming languages are executed internally.
+──────────────────────────
+ ThunderJS Execution Report
+──────────────────────────
+ Status  : SUCCESS
+ Time    : 8.42 ms
+ File    : script.js
+──────────────────────────
+```
+
+**Test runner output:**
+```
+File: tc1_types.js       → PASS
+File: tc2_loops.js       → PASS
+File: tc3_arrays.js      → PASS
+File: tc4_strings.js     → PASS
+File: tc5_objects.js     → PASS
+File: tc6_functions.js   → PASS
+
+═══════════════════════
+ Score: 6 / 6   100%
+═══════════════════════
+```
+
+---
+
+## Tech Stack
+
+| Component | Technology | Role |
+|---|---|---|
+| Host language | Python 3 | Orchestration, I/O, sandboxing |
+| JS engine | QuickJS (via `quickjs` binding) | JavaScript execution |
+| Sandbox | `multiprocessing` | Process isolation + timeout |
+| Serialization | `json` + JS `JSON.stringify` | Cross-boundary type normalization |
+
+---
+
+## Design Inspiration
+
+ThunderJS mirrors the internal architecture of production runtimes:
+
+- **Node.js** — embeds V8 (C++ JS engine) inside a C++ host with JS API overrides
+- **Deno** — embeds V8 inside Rust with sandboxed system calls
+- **ThunderJS** — embeds QuickJS inside Python with sandboxed process execution
+
+The core idea is identical: a host language wraps a JS engine, intercepts I/O at the boundary, and exposes controlled APIs. ThunderJS is that architecture in its simplest, most readable form.
