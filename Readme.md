@@ -14,52 +14,55 @@ No browser. No Node. Pure Python → JS execution pipeline.
 
 ---
 
-## Architecture
+## 🧠 Runtime Architecture
 
-```
+```text
 JavaScript Source Code
         │
         ▼
 ┌─────────────────────────┐
-│   Sandbox Layer         │  ← multiprocessing isolates execution
-│   (Process Boundary)    │    enforces timeout, prevents crashes
+│     Sandbox Layer       │
+│  multiprocessing based  │
+│ timeout + isolation     │
 └────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│   ThunderJS Engine      │  ← Python runtime orchestrator
-│   (JSEngine class)      │    owns QuickJS context lifecycle
+│   ThunderJS Engine      │
+│    (Python Runtime)     │
+│ manages JS lifecycle    │
 └────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│   QuickJS Context       │  ← embedded C-level JS engine
-│   ctx.eval(code)        │    executes actual JavaScript
+│    QuickJS Context      │
+│      ctx.eval(code)     │
+│ executes JavaScript     │
 └────────────┬────────────┘
              │
-        console.log called
+             ▼
+       console.log()
              │
              ▼
 ┌─────────────────────────┐
-│   JS-layer Override     │  ← console.log replaced at JS boot
-│   arguments → string    │    handles variadic args, all types
-└────────────┬────────────┘
-             │
-        _print() callback
-             │
-             ▼
-┌─────────────────────────┐
-│   Python Output Buffer  │  ← list collects each line
-│   Type Normalization    │    array→JSON, bool→lowercase, etc.
+│   JS Runtime Hook       │
+│ console.log override    │
+│ converts arguments      │
 └────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│   Execution Report      │  ← status, time_ms, output, errors
+│ Python Output Buffer    │
+│ captures runtime output │
+│ type normalization      │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│   Execution Report      │
+│ status • time • output │
+│ errors                  │
 └─────────────────────────┘
-```
-
----
 
 ## Why Each Layer Exists
 
