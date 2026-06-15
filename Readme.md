@@ -14,55 +14,52 @@ No browser. No Node. Pure Python → JS execution pipeline.
 
 ---
 
-## 🧠 Runtime Architecture
+## Architecture
 
-```text
+```
 JavaScript Source Code
         │
         ▼
 ┌─────────────────────────┐
-│     Sandbox Layer       │
-│  multiprocessing based  │
-│ timeout + isolation     │
+│   Sandbox Layer         │  ← multiprocessing isolates execution
+│   (Process Boundary)    │    enforces timeout, prevents crashes
 └────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│   ThunderJS Engine      │
-│    (Python Runtime)     │
-│ manages JS lifecycle    │
+│   ThunderJS Engine      │  ← Python runtime orchestrator
+│   (JSEngine class)      │    owns QuickJS context lifecycle
 └────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│    QuickJS Context      │
-│      ctx.eval(code)     │
-│ executes JavaScript     │
+│   QuickJS Context       │  ← embedded C-level JS engine
+│   ctx.eval(code)        │    executes actual JavaScript
 └────────────┬────────────┘
              │
-             ▼
-       console.log()
+        console.log called
              │
              ▼
 ┌─────────────────────────┐
-│   JS Runtime Hook       │
-│ console.log override    │
-│ converts arguments      │
+│   JS-layer Override     │  ← console.log replaced at JS boot
+│   arguments → string    │    handles variadic args, all types
 └────────────┬────────────┘
+             │
+        _print() callback
              │
              ▼
 ┌─────────────────────────┐
-│ Python Output Buffer    │
-│ captures runtime output │
-│ type normalization      │
+│   Python Output Buffer  │  ← list collects each line
+│   Type Normalization    │    array→JSON, bool→lowercase, etc.
 └────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│   Execution Report      │
-│ status • time • output │
-│ errors                  │
+│   Execution Report      │  ← status, time_ms, output, errors
 └─────────────────────────┘
+```
+
+---
 
 ## Why Each Layer Exists
 
@@ -124,6 +121,11 @@ pip install quickjs
 python -m thunder.main run examples/script.js
 ```
 
+**Run test suite:**
+```bash
+python test_runner.py
+```
+
 **Example input** (`script.js`):
 ```javascript
 let arr = [1, 2, 3];
@@ -147,7 +149,19 @@ ThunderJS
 ──────────────────────────
 ```
 
+**Test runner output:**
+```
+File: tc1_types.js       → PASS
+File: tc2_loops.js       → PASS
+File: tc3_arrays.js      → PASS
+File: tc4_strings.js     → PASS
+File: tc5_objects.js     → PASS
+File: tc6_functions.js   → PASS
 
+═══════════════════════
+ Score: 6 / 6   100%
+═══════════════════════
+```
 
 ---
 
